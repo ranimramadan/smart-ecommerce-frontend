@@ -1,4 +1,5 @@
-@import "tailwindcss";
+/* @import "tailwindcss";
+
 
 :root {
   --background: #ffffff;
@@ -23,4 +24,204 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+} */
+@import "tailwindcss";
+
+
+/* ============================================================
+   Auth Switcher — النسخة النهائية (سلاسة + تحكم سهل بمكان الدوائر)
+   ============================================================ */
+:root{
+  /* ألوان وخلفيات عامة */
+  --auth-bg: #eef2f8;
+  --panel-bg: #f5f7fb;
+  --primary-1: #5ba7ff;
+  --primary-2: #3767f4;
+  --divider:  #e4e9f3;
+
+  /* عرض اللوح المنزلق (يمين/يسار) */
+  --overlay-w: 40%;                /* غيّريها إلى 35%/38% حسب ذوقك */
+
+  /* سرعة/منحنى الحركة */
+  --ease-auth: cubic-bezier(.22,1,.36,1);
+  --dur-auth: 1.72s;
+
+  /* =========================
+     ⚙️ تحكم بمكان الدوائر (سهل)
+     =========================
+     - القيم التالية تُعدّل موضع الدوائر بدون ما تأثر على سلاسة الانتقال.
+     - القيم السالبة تعني الاتجاه نحو الداخل أو للأسفل (حسب الخاصية).
+  */
+
+  /* أفقيًا (قرب/بعد عن الحافة الداخلية للوح) */
+  --topPush: -120px;   /* الدائرة العلوية: قيمة أكثر سلبية = أقرب للحافة */
+  --botPush: -5px;   /* الدائرة السفلية: قيمة أكثر سلبية = أقرب للحافة */
+
+  /* عموديًا */
+  --topY:  -220px;      /* الدائرة العلوية: رقم سالب صغير = لفوق شوي */
+  --botY: -310px;      /* الدائرة السفلية: سالب أكبر = لتحت أكثر */
+
+  /* بارالاكس خفيف (عمق حركة) */
+  --parTop: -10px;     /* للدائرة العلوية */
+  --parBot: -16px;     /* للدائرة السفلية */
+
+  /* edge تُضبط تلقائيًا حسب اتجاه اللوح (شوفي قواعد data-pos) */
+  --edge: 100%;        /* 100% = الحافة الداخلية يمين، 0% = يسار */
 }
+
+body{ background: var(--auth-bg); }
+
+/* البطاقة الأساسية */
+.auth-switch-card{
+  position: relative; overflow: hidden; border-radius: 18px;
+  background: var(--panel-bg);
+  box-shadow: 0 18px 40px rgba(2,6,23,.08);
+}
+.auth-fixed-h{ height: 560px; }
+@media (max-width:1023px){ .auth-fixed-h{ height:auto; } }
+
+/* الشبكة: 60/40 ⇄ 40/60 حسب الوضع */
+.auth-grid{
+  position: relative; display:grid; height:100%;
+  grid-template-columns: 1fr 1fr;
+}
+.auth-grid[data-mode="login"]  { grid-template-columns: 60% 40%; }
+.auth-grid[data-mode="signup"] { grid-template-columns: 40% 60%; }
+
+/* أعمدة المحتوى */
+.auth-col{
+  padding: 28px 28px 36px;
+  display:flex; flex-direction:column; justify-content:center;
+}
+@media (min-width:1024px){ .auth-col{ padding: 40px 44px; } }
+
+/* عرض النموذج ثابت ومركزي */
+.form-wrap{
+  width: 380px;             /* غيّري عرض النموذج من هنا */
+  max-width: 90%;
+  margin-inline: auto;
+  text-align: center;
+}
+
+
+
+/* اللوح المنزلق */
+.auth-overlay{
+  position:absolute; top:0; bottom:0; left:0; width:var(--overlay-w);
+  background: var(--panel-bg);
+  z-index:20; overflow:hidden;
+  transition: left var(--dur-auth) var(--ease-auth), box-shadow .3s ease;
+  will-change:left;
+  box-shadow:none;
+}
+
+/* اللوح يسار (حافته الداخلية يمين) */
+.auth-overlay[data-pos="left"]{
+  left: 0;
+  box-shadow: 1px 0 0 var(--divider) inset, -1px 0 0 #ffffff inset;
+
+  /* الأقواس تلتحم بالحافة الداخلية "يمين" */
+  --edge: 100%;
+  --parTop: -90px;
+  --parBot: -600px;
+}
+
+/* اللوح يمين (حافته الداخلية يسار) */
+.auth-overlay[data-pos="right"]{
+  left: calc(100% - var(--overlay-w));
+  box-shadow: -1px 0 0 var(--divider) inset,  1px 0 0 #ffffff inset;
+
+  /* الأقواس تلتحم بالحافة الداخلية "يسار" */
+  --edge: 0%;
+  --parTop: 10px;
+  --parBot: 16px;
+}
+
+/* ====== الأقواس (Neumorphic) — تتحرك بانسياب مع اللوح ====== */
+.auth-overlay .ov-arc{
+  position:absolute; border-radius:9999px; background: var(--panel-bg);
+  border: 1px solid #e1e6f2;
+  /* حفر: غمق داخلي + لمعة داخلية + ظل خارجي ناعم */
+  box-shadow:
+    inset 8px 8px 18px rgba(0,0,0,.12),
+    inset -12px -12px 22px rgba(255,255,255,.98),
+    0 16px 16px rgba(15,23,42,.14);
+
+  /* انتقالات سلسة على نفس الخصائص */
+  transition:
+    left var(--dur-auth) var(--ease-auth),
+    top var(--dur-auth) var(--ease-auth),
+    bottom var(--dur-auth) var(--ease-auth),
+    transform var(--dur-auth) var(--ease-auth);
+  will-change:left,top,bottom,transform;
+}
+
+/* أبعاد + reset (لا نستخدم right أبداً) */
+.auth-overlay .ov-arc.top,
+.auth-overlay .ov-arc.bottom{
+  right:auto;
+}
+.auth-overlay .ov-arc.top{
+  width:360px; height:360px;
+  top: var(--topY);                                  /* ← عدّلي ارتفاع العلوية */
+  left: calc(var(--edge) + var(--topPush));          /* ← عدّلي قرب/بعد العلوية */
+  transform: translateX(var(--parTop));
+}
+.auth-overlay .ov-arc.bottom{
+  width:460px; height:460px;
+  bottom: var(--botY);                               /* ← عدّلي ارتفاع السفلية */
+  left: calc(var(--edge) + var(--botPush));          /* ← عدّلي قرب/بعد السفلية */
+  transform: translateX(var(--parBot));
+}
+
+/* محتوى اللوح */
+.overlay-content{
+  position:absolute; inset:0; display:grid; place-items:center; padding:2rem;
+}
+
+/* الحقول */
+.input-line{
+  width:100%; background:#fff; border:1px solid #e7ecf5; border-radius:10px;
+  padding:.6rem .9rem; outline:none;
+  transition: box-shadow .2s, border-color .2s, background .2s;
+}
+.input-line::placeholder{ color:#9aa3b2; }
+.input-line:focus{
+  background:#fff; border-color:#cfe0ff; box-shadow:0 6px 18px rgba(59,130,246,.18);
+}
+
+/* الأزرار */
+.btn-pill{
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:9999px; font-weight:700; color:#fff;
+  background: linear-gradient(180deg,var(--primary-1) 0%, var(--primary-2) 100%);
+  box-shadow: 0 12px 24px rgba(55,103,244,.35);
+  transition: filter .15s ease;
+}
+.btn-pill:hover{ filter:brightness(1.05); }
+
+/* زر متوسط (غير فل-ويدث) */
+.btn-mid{ padding:.65rem 1.4rem; min-width:220px; }
+.btn-ghost.btn-mid{ color:#475569; background:#fff; border:1px solid #e2e8f0; }
+
+/* أيقونات رماديّة */
+.icon-badge{
+  width:26px; height:26px; border-radius:9999px;
+  display:inline-grid; place-items:center;
+  border:1px solid #e6ebf5; background:#fff;
+}
+.icon-badge.muted{ color:#a0a7b4; background:#f7f9ff; border-color:#e5eaf3; }
+
+/* روابط */
+.link-sky{ color:#3b82f6; }
+.link-sky:hover{ text-decoration: underline; }
+
+/* ============================================================
+   ملاحظات سريعة:
+   - نزّلي الدائرة السفلية أكثر: عدّلي --botY (مثال: -230px)
+   - قرّبي الدائرة من الحافة: عدّلي --botPush إلى قيمة سالبة أكبر (مثال: -190px)
+   - نفس الشيء للدائرة العلوية عبر --topY و --topPush
+   - إن أردتِ قيمًا مختلفة حسب الاتجاه، تقدري تضيفي داخل
+     [data-pos="left"] أو [data-pos="right"] متغيّرات مخصّصة مثل:
+     .auth-overlay[data-pos="left"]{ --botY:-220px; --botPush:-185px; }
+   ============================================================ */
