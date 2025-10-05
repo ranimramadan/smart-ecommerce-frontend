@@ -2,13 +2,14 @@
 "use client";
 
 import { ENDPOINTS } from "@/config/endpoints";
-import api from "@/lib/api";
+import  api  from "@/lib/api";
 
-
-// ===== Types =====
 import type {
+  // الأساسيات
+  BlogPostImage,
+
   // Public: Posts
-  PublicPostsIndexParams,
+  PublicPostsFilters,
   PublicPostsIndexResponse,
   PublicPostShowResponse,
 
@@ -18,42 +19,51 @@ import type {
   PublicTagsIndexResponse,
   PublicTagShowResponse,
 
-  // Public: Comments (على بوست منشور)
+  // Public: Comments
   PublicCommentsIndexResponse,
-  PublicCommentStorePayload,
-  PublicCommentStoreResponse,
+  PublicCreateCommentPayload,
+  PublicCreateCommentResponse,
+
+  // Public: Media
+  PublicPostMediaResponse,
 
   // Admin: Posts
-  AdminPostsIndexParams,
+  AdminPostsFilters,
   AdminPostsIndexResponse,
-  AdminPostStorePayload,
-  AdminPostStoreResponse,
-  AdminPostUpdatePayload,
-  AdminPostUpdateResponse,
-  AdminPostDestroyResponse,
-  AdminPostPublishResponse,
-  AdminPostUnpublishResponse,
+  AdminCreatePostPayload,
+  AdminCreatePostResponse,
+  AdminUpdatePostPayload,
+  AdminUpdatePostResponse,
+  AdminDestroyPostResponse,
+  AdminPublishPostResponse,
+  AdminUnpublishPostResponse,
 
   // Admin: Categories
-  AdminCategoriesIndexParams,
+  AdminCategoriesFilters,
   AdminCategoriesIndexResponse,
-  AdminCategoryStorePayload,
-  AdminCategoryStoreResponse,
-  AdminCategoryUpdatePayload,
-  AdminCategoryUpdateResponse,
-  AdminCategoryDestroyResponse,
+  AdminCreateCategoryPayload,
+  AdminCreateCategoryResponse,
+  AdminUpdateCategoryPayload,
+  AdminUpdateCategoryResponse,
+  AdminDestroyCategoryResponse,
 
   // Admin: Tags
-  AdminTagsIndexParams,
+  AdminTagsFilters,
   AdminTagsIndexResponse,
-  AdminTagStorePayload,
-  AdminTagStoreResponse,
-  AdminTagUpdatePayload,
-  AdminTagUpdateResponse,
-  AdminTagDestroyResponse,
+  AdminCreateTagPayload,
+  AdminCreateTagResponse,
+  AdminUpdateTagPayload,
+  AdminUpdateTagResponse,
+  AdminDestroyTagResponse,
+
+  // Admin: Comments
+  AdminCommentsIndexResponse,
+  AdminCommentsFilters,
+  AdminModerateCommentPayload,
+  AdminModerateCommentResponse,
+  AdminDestroyCommentResponse,
 
   // Admin: Media
-  BlogPostImage,
   AdminStoreMediaPayload,
   AdminStoreMediaResponse,
   AdminUpdateMediaPayload,
@@ -61,36 +71,37 @@ import type {
   AdminDestroyMediaResponse,
 } from "@/types/blog";
 
-// ============ Utils ============
+/* ================= Utils ================= */
 
-/** يحوّل أي Record إلى FormData (يدعم File) */
 function toFD(payload: Record<string, any>): FormData {
   const fd = new FormData();
   Object.entries(payload || {}).forEach(([k, v]) => {
     if (v === undefined || v === null) return;
+
     if (v instanceof File) {
       fd.append(k, v);
       return;
     }
-    // Array of files
     if (Array.isArray(v) && v.length && v[0] instanceof File) {
       (v as File[]).forEach((f) => fd.append(`${k}[]`, f));
       return;
     }
-    // Array/objects -> JSON
+
     if (Array.isArray(v) || typeof v === "object") {
       fd.append(k, JSON.stringify(v));
       return;
     }
+
     fd.append(k, String(v));
   });
   return fd;
 }
 
-// ============ Public: Posts ============
+/* ============== Public ============== */
 
+// Posts
 export async function listPublicPosts(
-  params: PublicPostsIndexParams = {}
+  params: PublicPostsFilters = {}
 ): Promise<PublicPostsIndexResponse> {
   const { data } = await api.get<PublicPostsIndexResponse>(
     ENDPOINTS.BLOG.public.posts.index,
@@ -108,8 +119,7 @@ export async function showPublicPost(
   return data;
 }
 
-// ============ Public: Categories & Tags ============
-
+// Categories
 export async function listPublicBlogCategories(): Promise<PublicCategoriesIndexResponse> {
   const { data } = await api.get<PublicCategoriesIndexResponse>(
     ENDPOINTS.BLOG.public.categories.index
@@ -126,6 +136,7 @@ export async function showPublicBlogCategory(
   return data;
 }
 
+// Tags
 export async function listPublicBlogTags(): Promise<PublicTagsIndexResponse> {
   const { data } = await api.get<PublicTagsIndexResponse>(
     ENDPOINTS.BLOG.public.tags.index
@@ -142,8 +153,7 @@ export async function showPublicBlogTag(
   return data;
 }
 
-// ============ Public: Comments ============
-
+// Post comments (published posts)
 export async function listPublicPostComments(
   postIdOrSlug: number | string
 ): Promise<PublicCommentsIndexResponse> {
@@ -155,19 +165,29 @@ export async function listPublicPostComments(
 
 export async function storePublicPostComment(
   postIdOrSlug: number | string,
-  payload: PublicCommentStorePayload
-): Promise<PublicCommentStoreResponse> {
-  const { data } = await api.post<PublicCommentStoreResponse>(
+  payload: PublicCreateCommentPayload
+): Promise<PublicCreateCommentResponse> {
+  const { data } = await api.post<PublicCreateCommentResponse>(
     ENDPOINTS.BLOG.public.posts.comments.store(postIdOrSlug),
     payload
   );
   return data;
 }
 
-// ============ Admin: Posts ============
+// Post media (published posts)
+export async function listPublicPostMedia(
+  postIdOrSlug: number | string
+): Promise<PublicPostMediaResponse> {
+  const { data } = await api.get<PublicPostMediaResponse>(
+    ENDPOINTS.BLOG.public.posts.media.index(postIdOrSlug)
+  );
+  return data;
+}
+
+/* ============== Admin: Posts ============== */
 
 export async function adminListPosts(
-  params: AdminPostsIndexParams = {}
+  params: AdminPostsFilters = {}
 ): Promise<AdminPostsIndexResponse> {
   const { data } = await api.get<AdminPostsIndexResponse>(
     ENDPOINTS.BLOG.admin.posts.index,
@@ -177,9 +197,9 @@ export async function adminListPosts(
 }
 
 export async function adminStorePost(
-  payload: AdminPostStorePayload
-): Promise<AdminPostStoreResponse> {
-  const { data } = await api.post<AdminPostStoreResponse>(
+  payload: AdminCreatePostPayload
+): Promise<AdminCreatePostResponse> {
+  const { data } = await api.post<AdminCreatePostResponse>(
     ENDPOINTS.BLOG.admin.posts.store,
     payload
   );
@@ -188,9 +208,9 @@ export async function adminStorePost(
 
 export async function adminUpdatePost(
   postId: number | string,
-  payload: AdminPostUpdatePayload
-): Promise<AdminPostUpdateResponse> {
-  const { data } = await api.put<AdminPostUpdateResponse>(
+  payload: AdminUpdatePostPayload
+): Promise<AdminUpdatePostResponse> {
+  const { data } = await api.put<AdminUpdatePostResponse>(
     ENDPOINTS.BLOG.admin.posts.update(postId),
     payload
   );
@@ -199,8 +219,8 @@ export async function adminUpdatePost(
 
 export async function adminDestroyPost(
   postId: number | string
-): Promise<AdminPostDestroyResponse> {
-  const { data } = await api.delete<AdminPostDestroyResponse>(
+): Promise<AdminDestroyPostResponse> {
+  const { data } = await api.delete<AdminDestroyPostResponse>(
     ENDPOINTS.BLOG.admin.posts.destroy(postId)
   );
   return data;
@@ -208,8 +228,8 @@ export async function adminDestroyPost(
 
 export async function adminPublishPost(
   postId: number | string
-): Promise<AdminPostPublishResponse> {
-  const { data } = await api.post<AdminPostPublishResponse>(
+): Promise<AdminPublishPostResponse> {
+  const { data } = await api.post<AdminPublishPostResponse>(
     ENDPOINTS.BLOG.admin.posts.publish(postId)
   );
   return data;
@@ -217,17 +237,17 @@ export async function adminPublishPost(
 
 export async function adminUnpublishPost(
   postId: number | string
-): Promise<AdminPostUnpublishResponse> {
-  const { data } = await api.post<AdminPostUnpublishResponse>(
+): Promise<AdminUnpublishPostResponse> {
+  const { data } = await api.post<AdminUnpublishPostResponse>(
     ENDPOINTS.BLOG.admin.posts.unpublish(postId)
   );
   return data;
 }
 
-// ============ Admin: Categories ============
+/* ============== Admin: Categories ============== */
 
 export async function adminListCategories(
-  params: AdminCategoriesIndexParams = {}
+  params: AdminCategoriesFilters = {}
 ): Promise<AdminCategoriesIndexResponse> {
   const { data } = await api.get<AdminCategoriesIndexResponse>(
     ENDPOINTS.BLOG.admin.categories.index,
@@ -237,9 +257,9 @@ export async function adminListCategories(
 }
 
 export async function adminStoreCategory(
-  payload: AdminCategoryStorePayload
-): Promise<AdminCategoryStoreResponse> {
-  const { data } = await api.post<AdminCategoryStoreResponse>(
+  payload: AdminCreateCategoryPayload
+): Promise<AdminCreateCategoryResponse> {
+  const { data } = await api.post<AdminCreateCategoryResponse>(
     ENDPOINTS.BLOG.admin.categories.store,
     payload
   );
@@ -248,9 +268,9 @@ export async function adminStoreCategory(
 
 export async function adminUpdateCategory(
   id: number | string,
-  payload: AdminCategoryUpdatePayload
-): Promise<AdminCategoryUpdateResponse> {
-  const { data } = await api.put<AdminCategoryUpdateResponse>(
+  payload: AdminUpdateCategoryPayload
+): Promise<AdminUpdateCategoryResponse> {
+  const { data } = await api.put<AdminUpdateCategoryResponse>(
     ENDPOINTS.BLOG.admin.categories.update(id),
     payload
   );
@@ -259,17 +279,17 @@ export async function adminUpdateCategory(
 
 export async function adminDestroyCategory(
   id: number | string
-): Promise<AdminCategoryDestroyResponse> {
-  const { data } = await api.delete<AdminCategoryDestroyResponse>(
+): Promise<AdminDestroyCategoryResponse> {
+  const { data } = await api.delete<AdminDestroyCategoryResponse>(
     ENDPOINTS.BLOG.admin.categories.destroy(id)
   );
   return data;
 }
 
-// ============ Admin: Tags ============
+/* ============== Admin: Tags ============== */
 
 export async function adminListTags(
-  params: AdminTagsIndexParams = {}
+  params: AdminTagsFilters = {}
 ): Promise<AdminTagsIndexResponse> {
   const { data } = await api.get<AdminTagsIndexResponse>(
     ENDPOINTS.BLOG.admin.tags.index,
@@ -279,9 +299,9 @@ export async function adminListTags(
 }
 
 export async function adminStoreTag(
-  payload: AdminTagStorePayload
-): Promise<AdminTagStoreResponse> {
-  const { data } = await api.post<AdminTagStoreResponse>(
+  payload: AdminCreateTagPayload
+): Promise<AdminCreateTagResponse> {
+  const { data } = await api.post<AdminCreateTagResponse>(
     ENDPOINTS.BLOG.admin.tags.store,
     payload
   );
@@ -290,9 +310,9 @@ export async function adminStoreTag(
 
 export async function adminUpdateTag(
   id: number | string,
-  payload: AdminTagUpdatePayload
-): Promise<AdminTagUpdateResponse> {
-  const { data } = await api.put<AdminTagUpdateResponse>(
+  payload: AdminUpdateTagPayload
+): Promise<AdminUpdateTagResponse> {
+  const { data } = await api.put<AdminUpdateTagResponse>(
     ENDPOINTS.BLOG.admin.tags.update(id),
     payload
   );
@@ -301,14 +321,46 @@ export async function adminUpdateTag(
 
 export async function adminDestroyTag(
   id: number | string
-): Promise<AdminTagDestroyResponse> {
-  const { data } = await api.delete<AdminTagDestroyResponse>(
+): Promise<AdminDestroyTagResponse> {
+  const { data } = await api.delete<AdminDestroyTagResponse>(
     ENDPOINTS.BLOG.admin.tags.destroy(id)
   );
   return data;
 }
 
-// ============ Admin: Media (Post Images) ============
+/* ============== Admin: Comments ============== */
+
+export async function adminListComments(
+  params: AdminCommentsFilters = {}
+): Promise<AdminCommentsIndexResponse> {
+  const { data } = await api.get<AdminCommentsIndexResponse>(
+    ENDPOINTS.BLOG.admin.comments.index,
+    { params }
+  );
+  return data;
+}
+
+export async function adminModerateComment(
+  commentId: number | string,
+  payload: AdminModerateCommentPayload
+): Promise<AdminModerateCommentResponse> {
+  const { data } = await api.put<AdminModerateCommentResponse>(
+    ENDPOINTS.BLOG.admin.comments.moderate(commentId),
+    payload
+  );
+  return data;
+}
+
+export async function adminDestroyComment(
+  commentId: number | string
+): Promise<AdminDestroyCommentResponse> {
+  const { data } = await api.delete<AdminDestroyCommentResponse>(
+    ENDPOINTS.BLOG.admin.comments.destroy(commentId)
+  );
+  return data;
+}
+
+/* ============== Admin: Media ============== */
 
 export async function adminListPostMedia(
   postId: number | string
